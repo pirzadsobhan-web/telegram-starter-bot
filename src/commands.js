@@ -1,24 +1,74 @@
-// Your bot's behaviour. Add commands here; grammY's docs (grammy.dev) cover
-// keyboards, sessions, files, inline queries and everything else.
 
-import { InlineKeyboard } from "grammy"
+const SOURCE_CHANNEL = "GT1_SIGNALS";
+const DESTINATION_GROUP = -1003430913599;
 
 export function registerCommands(bot) {
-  bot.command("start", (ctx) =>
-    ctx.reply(`Hi ${ctx.from?.first_name ?? "there"}. I am alive and hosted on FadeHost. Send /help to see what I can do.`, {
-      reply_markup: new InlineKeyboard().text("Ping me", "ping"),
-    }),
-  )
 
-  bot.command("help", (ctx) =>
-    ctx.reply(["Commands:", "/start  say hello", "/help   this list", "/ping   check I am awake", "/id     show chat and user ids", "", "Send me any text and I echo it back."].join("\n")),
-  )
+  // دستور شروع
+  bot.command("start", async (ctx) => {
+    await ctx.reply("ربات انتقال پیام فعال است ✅");
+  });
 
-  bot.command("ping", (ctx) => ctx.reply("pong"))
+  // بررسی ارتباط ربات
+  bot.command("ping", async (ctx) => {
+    await ctx.reply("ربات فعال است 🟢");
+  });
 
-  bot.command("id", (ctx) => ctx.reply(`Chat id: ${ctx.chat.id}\nYour id: ${ctx.from?.id ?? "unknown"}`))
+  // دریافت پست‌های کانال
+  bot.on("channel_post", async (ctx) => {
 
-  bot.callbackQuery("ping", (ctx) => ctx.answerCallbackQuery({ text: "pong" }))
+    try {
 
-  bot.on("message:text", (ctx) => ctx.reply(ctx.message.text))
+      const chat = ctx.chat;
+      const post = ctx.channelPost;
+
+      // گزارش دریافت پست
+      console.log(
+        "[CHANNEL] New post received:",
+        chat.id,
+        post.message_id
+      );
+
+      // بررسی کانال مبدأ
+      if (
+        chat.username?.toLowerCase() !==
+        SOURCE_CHANNEL.toLowerCase()
+      ) {
+        console.log("[SKIP] Different channel");
+        return;
+      }
+
+      // دریافت متن یا کپشن
+      const content = post.text || post.caption || "";
+
+      console.log("[CONTENT]", content);
+
+      // بررسی وجود هشتگ
+      if (!content.includes("#")) {
+        console.log("[SKIP] No hashtag found");
+        return;
+      }
+
+      // ارسال نسخه کپی پیام به گروه
+      await ctx.api.copyMessage(
+        DESTINATION_GROUP,
+        chat.id,
+        post.message_id
+      );
+
+      console.log(
+        "[SUCCESS] Message copied to destination group"
+      );
+
+    } catch (error) {
+
+      console.error(
+        "[FORWARD ERROR]",
+        error.description || error.message || error
+      );
+
+    }
+
+  });
+
 }
