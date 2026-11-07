@@ -1,24 +1,47 @@
-// Your bot's behaviour. Add commands here; grammY's docs (grammy.dev) cover
-// keyboards, sessions, files, inline queries and everything else.
 
-import { InlineKeyboard } from "grammy"
+const SOURCE_CHANNEL = "GT1_SIGNALS";
+const DESTINATION_GROUP = "-1003430913599";
 
 export function registerCommands(bot) {
-  bot.command("start", (ctx) =>
-    ctx.reply(`Hi ${ctx.from?.first_name ?? "there"}. I am alive and hosted on FadeHost. Send /help to see what I can do.`, {
-      reply_markup: new InlineKeyboard().text("Ping me", "ping"),
-    }),
-  )
 
-  bot.command("help", (ctx) =>
-    ctx.reply(["Commands:", "/start  say hello", "/help   this list", "/ping   check I am awake", "/id     show chat and user ids", "", "Send me any text and I echo it back."].join("\n")),
-  )
+  // دستور شروع
+  bot.command("start", (ctx) => {
+    return ctx.reply("ربات انتقال پیام فعال است ✅");
+  });
 
-  bot.command("ping", (ctx) => ctx.reply("pong"))
+  // دریافت پست‌های کانال
+  bot.on("channel_post", async (ctx) => {
+    try {
+      const chat = ctx.chat;
+      const post = ctx.channelPost;
 
-  bot.command("id", (ctx) => ctx.reply(`Chat id: ${ctx.chat.id}\nYour id: ${ctx.from?.id ?? "unknown"}`))
+      // فقط کانال موردنظر
+      if (chat.username?.toLowerCase() !== SOURCE_CHANNEL.toLowerCase()) {
+        return;
+      }
 
-  bot.callbackQuery("ping", (ctx) => ctx.answerCallbackQuery({ text: "pong" }))
+      // بررسی متن یا کپشن
+      const content = post.text || post.caption || "";
 
-  bot.on("message:text", (ctx) => ctx.reply(ctx.message.text))
+      // فقط پیام‌های دارای #
+      if (!content.includes("#")) {
+        return;
+      }
+
+      // انتقال پیام با حفظ محتوای اصلی
+      await ctx.api.copyMessage(
+        DESTINATION_GROUP,
+        chat.id,
+        post.message_id
+      );
+
+      console.log("Hashtag post forwarded successfully.");
+
+    } catch (error) {
+      console.error("Forward error:", error);
+    }
+  });
+
+  bot.command("ping", (ctx) => ctx.reply("pong 🟢"));
+
 }
